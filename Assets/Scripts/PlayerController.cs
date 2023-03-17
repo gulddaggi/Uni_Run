@@ -14,26 +14,66 @@ public class PlayerController : MonoBehaviour {
    private AudioSource playerAudio; // 사용할 오디오 소스 컴포넌트
 
    private void Start() {
-       // 초기화
+        // 초기화
+        playerRigidbody = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        playerAudio = GetComponent<AudioSource>();
    }
 
    private void Update() {
-       // 사용자 입력을 감지하고 점프하는 처리
+        // 사용자 입력을 감지하고 점프하는 처리
+        if (isDead)
+        {
+            return;
+        }
+
+        if (Input.GetMouseButtonDown(0) && jumpCount < 2)
+        {
+            jumpCount++;
+            // 점프 직전 속도를 0으로
+            playerRigidbody.velocity = Vector2.zero;
+            // 점프 실행
+            playerRigidbody.AddForce(new Vector2(0, jumpForce));
+            playerAudio.Play();
+        }
+        else if (Input.GetMouseButtonUp(0) && playerRigidbody.velocity.y > 0) // 마우스 버튼을 누르는 시간에 따른 점프 높이 변화를 구현
+        {
+            // 마우스에서 손을 땜 + 속도의 y 값이 양수(상승 중)
+            // 속도를 절반으로
+            playerRigidbody.velocity = playerRigidbody.velocity * 0.5f;
+        }
+
+        animator.SetBool("Grounded", isGrounded);
    }
 
    private void Die() {
-       // 사망 처리
+        // 사망 처리
+        animator.SetTrigger("Die");
+        playerAudio.clip = deathClip;
+        playerAudio.Play();
+
+        playerRigidbody.velocity = Vector2.zero;
+        isDead = true;
    }
 
    private void OnTriggerEnter2D(Collider2D other) {
-       // 트리거 콜라이더를 가진 장애물과의 충돌을 감지
+        
+        if (other.tag == "Dead" && !isDead)
+        {
+            Die();
+        }
    }
 
    private void OnCollisionEnter2D(Collision2D collision) {
-       // 바닥에 닿았음을 감지하는 처리
+        // 콜라이더와 충돌, 충돌 표면(normal 벡터)이 위를 보고 있으면
+        if (collision.contacts[0].normal.y > 0.7f) // 절벽이나 천장을 바닥으로 인식하는 문제 해결
+        {
+            isGrounded = true;
+            jumpCount = 0;
+        }
    }
 
    private void OnCollisionExit2D(Collision2D collision) {
-       // 바닥에서 벗어났음을 감지하는 처리
+        isGrounded = false;
    }
 }
